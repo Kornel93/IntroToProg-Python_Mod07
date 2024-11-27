@@ -115,13 +115,14 @@ class Person:
 # creating a student class, defining it to inherit both attributes and properties
 class Student(Person):
     """
-    Represents a student enrolled in a course. Inherits from Person.
+    Represents a student enrolled in a course. Inherits from the Person class.
 
     Attributes:
+        first_name (str): The first name of the student.
+        last_name (str): The last name of the student.
         course_name (str): The name of the course the student is enrolled in.
     """
 
-    # creating a constructor and providing it (3) properties
     def __init__(self, first_name: str, last_name: str, course_name: str = ""):
         """
         Initializes a new instance of the Student class.
@@ -129,65 +130,112 @@ class Student(Person):
         Args:
             first_name (str): The first name of the student.
             last_name (str): The last name of the student.
-            course_name (str): The name of the course.
+            course_name (str, optional): The name of the course the student is enrolled in. Defaults to an empty string.
         """
-        super().__init__(first_name, last_name)  # pulling from the Person parent class
-        self.course_name = course_name
+        super().__init__(first_name, last_name)  # Initialize the Person part
+        self.course_name = course_name  # Initialize course_name
 
-    @property  # creating a getter for the course_name
+    @property
     def course_name(self):
         """
-        Gets the course name.
+        Gets the course name of the student.
 
         Returns:
-            str: The name of the course.
+            str: The course name that the student is enrolled in.
         """
         return self.__course_name
 
-    @course_name.setter  # creating a setter with validation for the course name
+    @course_name.setter
     def course_name(self, value: str):
         """
-        Sets the course name, ensuring it contains only letters, numbers, or spaces.
+        Sets the course name for the student, ensuring it contains only letters, numbers, or spaces.
 
         Args:
-            value (str): The course name value.
+            value (str): The course name to be set.
 
         Raises:
-            ValueError: If the value contains invalid characters.
+            ValueError: If the value contains any invalid characters.
         """
-        if value and all(x.isalnum() or x.isspace() for x in value):  # this checks for only letters, numbers,
-            # or spaces for x in the value string
+        if value and all(x.isalnum() or x.isspace() for x in value):
             self.__course_name = value
         else:
             raise ValueError("Course name should only contain letters, numbers, or spaces")
 
-    def __str__(self) -> str:  # overwriting the __str__method to include course name in student data
+    def __str__(self):
         """
-        Converts the student object to a user-friendly string.
+        Converts the Student object into a user-friendly string representation.
 
         Returns:
-            str: A formatted string with the student's details.
+            str: A formatted string showing the student's first name, last name, and course name.
         """
-        return f"Student(first_name='{self.first_name}', last_name='{self.last_name}', course_name='{self.course_name}')"
+        person_str = super().__str__()  # Use the __str__ method from the parent class
+        return f"{person_str}, course_name='{self.course_name}'"
+
+    def to_dict(self):
+        """
+        Converts the Student object to a dictionary for JSON serialization.
+
+        Returns:
+            dict: A dictionary containing the student's details (first name, last name, and course name).
+        """
+        return {
+            "FirstName": self.first_name,
+            "LastName": self.last_name,
+            "CourseName": self.course_name
+        }
+
+    @staticmethod
+    def from_dict(data):
+        """
+        Converts a dictionary to a Student object.
+
+        Args:
+            data (dict): A dictionary containing student data (first name, last name, and course name).
+
+        Returns:
+            Student: A Student object initialized with the data from the dictionary.
+        """
+        return Student(first_name=data["FirstName"], last_name=data["LastName"], course_name=data["CourseName"])
 
 class FileProcessor:
     """Processing functions for file operations."""
 
     @staticmethod
     def read_data_from_file(file_name: str, student_data: list):
+        """
+        Reads student data from a file and converts it into Student objects.
+
+        Args:
+            file_name (str): The name of the file to read from.
+            student_data (list): A list to hold the student objects.
+
+        Returns:
+            list: A list of Student objects read from the file.
+        """
         try:
             with open(file_name, "r") as file:
-                student_data = json.load(file)
+                data = json.load(file)
+                # Convert dictionaries to Student objects
+                student_data = [Student.from_dict(student) for student in data]
         except Exception as e:
             IO.output_error_messages(message="Error: There was a problem with reading the file.", error=e)
         return student_data
 
     @staticmethod
     def write_data_to_file(file_name: str, student_data: list):
+        """
+        Writes student data to a file after converting Student objects to dictionaries.
+
+        Args:
+            file_name (str): The name of the file to write to.
+            student_data (list): A list of Student objects to write to the file.
+        """
         try:
+            # Convert Student objects to dictionaries before saving
+            data = [student.to_dict() for student in student_data]
             with open(file_name, "w") as file:
-                json.dump(student_data, file)
-            IO.output_student_and_course_names(student_data=student_data)
+                json.dump(data, file, indent=4)  # Pretty print with indentation
+            IO.output_student_and_course_names(student_data)
         except Exception as e:
             message = "Error: There was a problem with writing to the file.\n"
             message += "Please check that the file is not open by another program."
@@ -221,13 +269,26 @@ class IO:
 
     @staticmethod
     def output_student_and_course_names(student_data: list):
+        """
+        Outputs the student names and course names in a user-friendly format.
+
+        Args:
+            student_data (list): A list of Student objects to output.
+        """
         print("-" * 50)
         for student in student_data:
-            print(f'Student {student["FirstName"]} {student["LastName"]} is enrolled in {student["CourseName"]}')
+            # Access Student object properties directly
+            print(f'Student {student.first_name} {student.last_name} is enrolled in {student.course_name}')
         print("-" * 50)
 
     @staticmethod
     def input_student_data(student_data: list):
+        """
+        Takes user input for student data, creates a Student object, and appends it to the student list.
+
+        Args:
+            student_data (list): A list to store the new student data.
+        """
         try:
             student_first_name = input("Enter the student's first name: ")
             if not student_first_name.isalpha():
@@ -236,9 +297,9 @@ class IO:
             if not student_last_name.isalpha():
                 raise ValueError("The last name should not contain numbers.")
             course_name = input("Please enter the name of the course: ")
-            student = {"FirstName": student_first_name,
-                       "LastName": student_last_name,
-                       "CourseName": course_name}
+
+            # Create a Student object
+            student = Student(first_name=student_first_name, last_name=student_last_name, course_name=course_name)
             student_data.append(student)
             print(f"You have registered {student_first_name} {student_last_name} for {course_name}.")
         except ValueError as e:
